@@ -20,20 +20,23 @@ class PaymentRepositoryTest {
     @Autowired
     private PaymentRepository underTest;
 
-
     @Test
     void itShouldSavePayment() {
         // Given
         long paymentId = 1L;
         Payment payment =
-                new Payment(paymentId, UUID.randomUUID(), new BigDecimal("10.00"), Currency.GBP, "Card1234", "Donation");
+                new Payment(paymentId, UUID.randomUUID(),
+                        new BigDecimal("10.00"),
+                        Currency.GBP, "Card123", "Donation");
         // When
         underTest.save(payment);
         Optional<Payment> optionalPayment = underTest.findById(paymentId);
         // Then
         assertThat(optionalPayment).isPresent()
                 .hasValueSatisfying(p -> {
-                    assertThat(p).isEqualToIgnoringGivenFields(payment, "paymentId");
+//                    assertThat(p).isEqualToIgnoringGivenFields(payment, "paymentId");
+                    assertThat(p).isEqualToComparingFieldByField(payment);
+//                    assertThat(p).isEqualTo(payment);
                 });
 
     }

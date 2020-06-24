@@ -13,17 +13,11 @@ public class Payment {
     @Id
     @GeneratedValue
     private Long paymentId;
-
     private UUID customerId;
-
     private BigDecimal amount;
-
     private Currency currency;
-
     private String source;
-
     private String description;
-
 
     public Payment(Long paymentId, UUID customerId, BigDecimal amount, Currency currency,
                    String source, String description) {

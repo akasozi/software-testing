@@ -28,29 +28,31 @@ public class PaymentService {
 
 
     public void chargCard(UUID customerId, PaymentRequest request) {
-
+        // 1. Does the customer exist if not throw
         Optional<Customer> optionalCustomer = customerRepository.findById(customerId);
         if (!optionalCustomer.isPresent()) {
             throw new IllegalStateException("Customer " + customerId + " was not found");
         }
 
+        // 2. Do we support the currency if not throw
         Currency currency = request.getPayment().getCurrency();
         if(!supportedCurrencies.contains(currency)) {
             throw new IllegalStateException("Currency " + currency + " is not supported");
         }
-
+        // 3. Charge card
         Payment payment =request.getPayment();
         CardPaymentCharge cardPaymentCharge = cardPaymentCharger
                 .chargeCard(payment.getAmount(),
                             payment.getCurrency(),
                             payment.getSource(),
                             payment.getDescription());
-
+        // 4. If not debited throw
         if (!cardPaymentCharge.isCardDebited()) {
             throw new IllegalStateException("Card '" + payment.getSource() + "' was not charged");
         }
-
+        // 5. Insert payment
         payment.setCustomerId(customerId);
         paymentRepository.save(payment);
+        // 6. TODO: send SMS
     }
 }
