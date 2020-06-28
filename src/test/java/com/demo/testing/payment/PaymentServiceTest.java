@@ -2,6 +2,7 @@ package com.demo.testing.payment;
 
 import com.demo.testing.customer.Customer;
 import com.demo.testing.customer.CustomerRepository;
+import com.demo.testing.sms.SmsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,13 +31,16 @@ class PaymentServiceTest {
     private PaymentRepository paymentRepository;
     @Mock
     private CardPaymentCharger cardPaymentCharger;
+    @Mock
+    private SmsService smsService;
 
     private PaymentService underTest;
+
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.initMocks(this);
-        underTest = new PaymentService(customerRepository, paymentRepository, cardPaymentCharger);
+        underTest = new PaymentService(customerRepository, paymentRepository, cardPaymentCharger, smsService);
     }
 
 
@@ -58,13 +62,15 @@ class PaymentServiceTest {
         assertThatThrownBy(() -> underTest.chargCard(customerId, request))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Customer " + customerId + " was not found");
-        // Then
+
         then(cardPaymentCharger).shouldHaveNoInteractions();
+        then(paymentRepository).shouldHaveNoInteractions();
+        then(smsService).shouldHaveNoInteractions();
 
     }
 
     @Test
-    void itShouldChargeCard() {
+    void itShouldChargeCardAndSendSMS() {
         // Given a customer
         UUID customerId = UUID.randomUUID();
         String phoneNumber = "+254728107303";
@@ -93,6 +99,22 @@ class PaymentServiceTest {
 
         assertThat(paymentArgumentCaptorValue.getCustomerId())
                 .isEqualTo(customerId);
+
+        ArgumentCaptor<String> destinationMSISDNArgumentCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> sourceMSISDNArgumentCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> messageArgumentCaptor = ArgumentCaptor.forClass(String.class);
+
+        then(smsService).should().send(destinationMSISDNArgumentCaptor.capture(),
+                                         messageArgumentCaptor.capture());
+
+        String destinationMSISDNArgumentCaptorValue = destinationMSISDNArgumentCaptor.getValue();
+        String sourceMSISDNArgumentCaptorValue = sourceMSISDNArgumentCaptor.getValue();
+        String messageArgumentCaptorValue = messageArgumentCaptor.getValue();
+
+        assertThat(destinationMSISDNArgumentCaptorValue).isEqualTo(phoneNumber);
+        assertThat(sourceMSISDNArgumentCaptorValue).isNotNull();
+        assertThat(messageArgumentCaptorValue).isNotNull();
+
     }
 
     @Test
@@ -122,6 +144,8 @@ class PaymentServiceTest {
                 .hasMessageContaining("Card '" + request.getPayment().getSource() + "' was not charged");
         // Then
         then(paymentRepository).should(never()).save(any(Payment.class));
+        then(smsService).shouldHaveNoInteractions();
+
     }
 
     @Test
@@ -147,5 +171,6 @@ class PaymentServiceTest {
 
         then(cardPaymentCharger).shouldHaveNoInteractions();
         then(paymentRepository).should(never()).save(any(Payment.class));
+        then(smsService).shouldHaveNoInteractions();
     }
 }
